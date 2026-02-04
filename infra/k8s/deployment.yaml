@@ -1,0 +1,146 @@
+# ===========================================================================
+# RiskSentinel — Kubernetes Manifests
+# Apply:  kubectl apply -f infra/k8s/
+# ===========================================================================
+---
+# ── ConfigMap (non-secret env vars) ─────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: risksentinel-config
+  namespace: risksentinel
+data:
+  APP_ENV: "production"
+  APP_PORT: "8000"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka-headless:9092"
+  KAFKA_TRANSACTION_TOPIC: "rs.transactions.raw"
+  KAFKA_SCORED_TOPIC: "rs.transactions.scored"
+  KAFKA_ALERT_TOPIC: "rs.alerts"
+  KAFKA_CONSUMER_GROUP: "risksentinel-scorer"
+  RISK_SCORE_HIGH: "0.7"
+  RISK_SCORE_CRITICAL: "0.9"
+  VELOCITY_WINDOW_SECONDS: "300"
+  VELOCITY_MAX_TXN_COUNT: "10"
+  VELOCITY_MAX_TOTAL_ZAR: "50000.0"
+  AMOUNT_ANOMALY_ZSCORE: "3.0"
+  ML_ENABLED: "true"
+  ML_MODEL_PATH: "ml/models/anomaly_model.pkl"
+---
+# ── Secret (database URL, secret key — base64 in production) ───────────────
+apiVersion: v1
+kind: Secret
+metadata:
+  name: risksentinel-secrets
+  namespace: risksentinel
+type: Opaque
+stringData:
+  DATABASE_URL: "postgresql+asyncpg://risksentinel:changeme@pg-service:5432/risksentinel"
+  SECRET_KEY: "replace-with-a-secure-random-string"
+---
+# ── Deployment ──────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: risksentinel-api
+  namespace: risksentinel
+  labels:
+    app: risksentinel
+    tier: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: risksentinel
+      tier: api
+  template:
+    metadata:
+      labels:
+        app: risksentinel
+        tier: api
+    spec:
+      containers:
+        - name: risksentinel-api
+          image: your-registry/risksentinel:latest   # ← update with your image
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: risksentinel-config
+            - secretRef:
+                name: risksentinel-secrets
+          resources:
+            requests:
+              cpu:    250m
+              memory: 256Mi
+            limits:
+              cpu:    1000m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+      # Optional: pin to nodes with SSD for ML model volume
+      # nodeSelector:
+      #   disktype: ssd
+---
+# ── Service ─────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: risksentinel-api-svc
+  namespace: risksentinel
+spec:
+  selector:
+    app: risksentinel
+    tier: api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+  type: ClusterIP
+---
+# ── HorizontalPodAutoscaler ─────────────────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: risksentinel-hpa
+  namespace: risksentinel
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: risksentinel-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75
+---
+# ── Namespace ───────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: risksentinel
+  labels:
+    managed-by: risksentinel

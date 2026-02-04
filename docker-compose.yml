@@ -1,0 +1,119 @@
+version: "3.9"
+# ===========================================================================
+# RiskSentinel — Full local-dev stack
+#   docker compose up --build
+# ===========================================================================
+
+services:
+  # -----------------------------------------------------------------------
+  # PostgreSQL
+  # -----------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: rs-postgres
+    environment:
+      POSTGRES_USER: risksentinel
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: risksentinel
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U risksentinel -d risksentinel"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # -----------------------------------------------------------------------
+  # Zookeeper  (required by Kafka)
+  # -----------------------------------------------------------------------
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: rs-zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ALLOW_NONE_AUTHENTICATION: "yes"
+
+  # -----------------------------------------------------------------------
+  # Kafka
+  # -----------------------------------------------------------------------
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: rs-kafka
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: "1"
+      KAFKA_CFG_LOG_RETENTION_HOURS: "24"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --list --bootstrap-server localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -----------------------------------------------------------------------
+  # RiskSentinel API  (FastAPI)
+  # -----------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rs-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://risksentinel:password@db:5432/risksentinel"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      APP_ENV: development
+      ML_ENABLED: "true"
+    volumes:
+      # Hot-reload: mount source into container
+      - .:/app
+    working_dir: /app
+
+  # -----------------------------------------------------------------------
+  # Seed job  (runs once after DB is ready, then exits)
+  # -----------------------------------------------------------------------
+  seed:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rs-seed
+    entrypoint: ["python", "-m", "app.seed"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://risksentinel:password@db:5432/risksentinel"
+
+  # -----------------------------------------------------------------------
+  # ML training job  (one-shot — produces ml/models/anomaly_model.pkl)
+  # -----------------------------------------------------------------------
+  ml-train:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rs-ml-train
+    entrypoint: ["python", "-m", "ml.train"]
+    volumes:
+      - .:/app
+    working_dir: /app
+
+# ---------------------------------------------------------------------------
+# Volumes
+# ---------------------------------------------------------------------------
+volumes:
+  pg_data:

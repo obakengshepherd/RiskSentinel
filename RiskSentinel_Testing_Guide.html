@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RiskSentinel — Testing Playbook</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet"/>
+<style>
+/* ─── RESET & VARIABLES ──────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg-0:#0a0c0f;
+  --bg-1:#111418;
+  --bg-2:#181d24;
+  --bg-3:#1e252e;
+  --border:#2a3340;
+  --green:#39ff14;
+  --green-dim:#39ff1466;
+  --amber:#ffb800;
+  --amber-dim:#ffb80044;
+  --red:#ff4d4d;
+  --red-dim:#ff4d4d33;
+  --blue:#4da6ff;
+  --blue-dim:#4da6ff33;
+  --text:#c8d0d8;
+  --text-bright:#eef1f4;
+  --text-muted:#5a6472;
+  --accent-glow: 0 0 12px #39ff1455, 0 0 40px #39ff1422;
+  --font-code:'IBM Plex Mono',monospace;
+  --font-display:'Syne',sans-serif;
+  --radius:6px;
+  --transition:150ms cubic-bezier(.4,0,.2,1);
+}
+
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--font-code);
+  background:var(--bg-0);
+  color:var(--text);
+  line-height:1.6;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ─── SCANLINE OVERLAY ──────────────────────────────────────── */
+body::after{
+  content:'';
+  position:fixed;inset:0;
+  pointer-events:none;
+  z-index:999;
+  background:repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 3px,
+    rgba(0,0,0,.08) 3px,
+    rgba(0,0,0,.08) 4px
+  );
+}
+
+/* ─── HERO ──────────────────────────────────────────────────── */
+.hero{
+  position:relative;
+  padding:72px 24px 56px;
+  text-align:center;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(57,255,20,.06) 0%, transparent 70%),
+    var(--bg-0);
+  border-bottom:1px solid var(--border);
+  overflow:hidden;
+}
+.hero::before{
+  content:'';
+  position:absolute;inset:0;
+  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2339ff14' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity:.6;
+}
+.hero-badge{
+  position:relative;
+  display:inline-block;
+  font-size:11px;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  color:var(--green);
+  margin-bottom:20px;
+  padding:6px 16px;
+  border:1px solid var(--green-dim);
+  border-radius:20px;
+  background:var(--green-dim);
+}
+.hero-badge .dot{
+  display:inline-block;width:7px;height:7px;
+  border-radius:50%;
+  background:var(--green);
+  margin-right:8px;
+  box-shadow:var(--accent-glow);
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{
+  0%,100%{opacity:1;transform:scale(1)}
+  50%{opacity:.5;transform:scale(.85)}
+}
+.hero h1{
+  position:relative;
+  font-family:var(--font-display);
+  font-size:clamp(36px,6vw,58px);
+  font-weight:800;
+  color:var(--text-bright);
+  line-height:1.1;
+  margin-bottom:12px;
+}
+.hero h1 span{color:var(--green);text-shadow:var(--accent-glow)}
+.hero p{
+  position:relative;
+  color:var(--text-muted);
+  font-size:14px;
+  max-width:620px;
+  margin:0 auto;
+}
+
+/* ─── LAYOUT ────────────────────────────────────────────────── */
+.wrapper{
+  max-width:860px;
+  margin:0 auto;
+  padding:48px 24px 100px;
+}
+
+/* ─── PHASE LABEL ───────────────────────────────────────────── */
+.phase-label{
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:12px;margin-top:56px;
+}
+.phase-label:first-of-type{margin-top:0}
+.phase-label .phase-tag{
+  font-family:var(--font-display);
+  font-size:10px;font-weight:700;
+  letter-spacing:3.5px;
+  text-transform:uppercase;
+  color:var(--amber);
+  background:var(--amber-dim);
+  border:1px solid var(--amber-dim);
+  padding:5px 12px;
+  border-radius:4px;
+}
+.phase-label .phase-line{flex:1;height:1px;background:var(--border)}
+
+/* ─── STEP CARD ─────────────────────────────────────────────── */
+.step{
+  position:relative;
+  background:var(--bg-1);
+  border:1px solid var(--border);
+  border-radius:10px;
+  margin-bottom:16px;
+  overflow:hidden;
+  transition:border-color var(--transition);
+}
+.step:hover{border-color:#3a4a5a}
+.step.active{border-color:var(--green-dim)}
+
+/* header row */
+.step-header{
+  display:flex;align-items:center;gap:14px;
+  padding:18px 22px;
+  cursor:pointer;
+  user-select:none;
+  -webkit-user-select:none;
+}
+.step-number{
+  flex-shrink:0;
+  width:36px;height:36px;
+  border-radius:50%;
+  border:2px solid var(--border);
+  background:var(--bg-2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:600;
+  color:var(--text-muted);
+  transition:all var(--transition);
+  position:relative;
+}
+.step.active .step-number{
+  border-color:var(--green);
+  color:var(--green);
+  background:var(--green-dim);
+  box-shadow:var(--accent-glow);
+}
+.step-number .check{
+  display:none;
+  position:absolute;inset:0;
+  align-items:center;justify-content:center;
+  font-size:18px;color:var(--green);
+}
+.step.done .step-number .check{display:flex}
+.step.done .step-number .num{display:none}
+.step.done{border-color:var(--green-dim)!important}
+.step.done .step-number{
+  border-color:var(--green);
+  background:var(--green-dim);
+  box-shadow:var(--accent-glow);
+}
+
+.step-title-wrap{flex:1;min-width:0}
+.step-title{
+  font-family:var(--font-display);
+  font-size:16px;font-weight:700;
+  color:var(--text-bright);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.step-meta{font-size:11px;color:var(--text-muted);margin-top:2px}
+
+.step-chevron{
+  width:20px;height:20px;
+  color:var(--text-muted);
+  transition:transform var(--transition);
+}
+.step.open .step-chevron{transform:rotate(180deg)}
+
+/* body (collapsible) */
+.step-body{
+  max-height:0;overflow:hidden;
+  transition:max-height .45s cubic-bezier(.4,0,.2,1);
+}
+.step.open .step-body{max-height:9999px}
+.step-inner{padding:0 22px 22px}
+
+/* info boxes */
+.info-box{
+  display:flex;gap:12px;
+  padding:14px 16px;
+  border-radius:var(--radius);
+  margin-bottom:16px;
+  border-left:3px solid;
+}
+.info-box.tip{background:var(--green-dim);border-color:var(--green)}
+.info-box.tip .ib-icon{color:var(--green)}
+.info-box.warn{background:var(--amber-dim);border-color:var(--amber)}
+.info-box.warn .ib-icon{color:var(--amber)}
+.info-box.note{background:var(--blue-dim);border-color:var(--blue)}
+.info-box.note .ib-icon{color:var(--blue)}
+.ib-icon{flex-shrink:0;font-size:18px;line-height:1.3}
+.ib-text{font-size:13px;color:var(--text)}
+.ib-text strong{color:var(--text-bright)}
+
+/* prose */
+.prose{font-size:13px;color:var(--text);margin-bottom:14px;line-height:1.7}
+.prose strong{color:var(--text-bright)}
+
+/* ─── TERMINAL BLOCK ────────────────────────────────────────── */
+.terminal{
+  background:var(--bg-0);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  margin-bottom:16px;
+  overflow:hidden;
+}
+.terminal-bar{
+  display:flex;align-items:center;
+  padding:10px 14px;
+  background:var(--bg-2);
+  border-bottom:1px solid var(--border);
+  gap:6px;
+}
+.terminal-bar .dot{width:12px;height:12px;border-radius:50%}
+.terminal-bar .dot:nth-child(1){background:#ff5f57}
+.terminal-bar .dot:nth-child(2){background:#ffbd2e}
+.terminal-bar .dot:nth-child(3){background:#28c840}
+.terminal-bar .label{
+  margin-left:auto;
+  font-size:11px;color:var(--text-muted);
+  letter-spacing:1px;
+}
+.terminal-bar .copy-btn{
+  margin-left:10px;
+  background:none;border:1px solid var(--border);
+  color:var(--text-muted);
+  font-family:var(--font-code);font-size:11px;
+  padding:3px 10px;border-radius:4px;cursor:pointer;
+  transition:all var(--transition);
+}
+.terminal-bar .copy-btn:hover{border-color:var(--green);color:var(--green)}
+.terminal-bar .copy-btn.copied{border-color:var(--green);color:var(--green);background:var(--green-dim)}
+
+.terminal-body{
+  padding:16px 18px;
+  overflow-x:auto;
+  white-space:pre;
+  font-size:13px;
+  line-height:1.75;
+  color:var(--text);
+}
+/* syntax colours */
+.c-prompt{color:var(--green);user-select:none}
+.c-cmd{color:var(--text-bright);font-weight:500}
+.c-flag{color:var(--blue)}
+.c-str{color:var(--amber)}
+.c-comment{color:var(--text-muted);font-style:italic}
+.c-out{color:var(--text-muted)}
+.c-success{color:var(--green)}
+.c-warn{color:var(--amber)}
+.c-err{color:var(--red)}
+.c-url{color:var(--blue);text-decoration:underline;cursor:pointer}
+
+/* ─── EXPECTED-OUTPUT BOX ───────────────────────────────────── */
+.expected{
+  background:var(--bg-2);
+  border:1px dashed var(--border);
+  border-radius:var(--radius);
+  padding:14px 18px;
+  margin-bottom:16px;
+}
+.expected-label{
+  font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--text-muted);margin-bottom:8px;
+  display:flex;align-items:center;gap:6px;
+}
+.expected-label::before{
+  content:'';display:inline-block;
+  width:8px;height:8px;border-radius:2px;
+  background:var(--blue);
+}
+.expected pre{font-size:12px;color:var(--text);white-space:pre-wrap;word-break:break-all}
+
+/* ─── TABLE ─────────────────────────────────────────────────── */
+.tbl-wrap{overflow-x:auto;margin-bottom:16px}
+table{
+  width:100%;border-collapse:collapse;
+  font-size:12.5px;
+}
+th{
+  text-align:left;
+  color:var(--text-muted);
+  font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  border-bottom:1px solid var(--border);
+  padding:8px 12px;
+  background:var(--bg-2);
+}
+td{
+  padding:10px 12px;
+  border-bottom:1px solid var(--bg-2);
+  color:var(--text);
+  vertical-align:top;
+}
+tr:hover td{background:var(--bg-2)}
+.tag{
+  display:inline-block;
+  font-size:10px;letter-spacing:1px;text-transform:uppercase;
+  padding:3px 8px;border-radius:3px;font-weight:600;
+}
+.tag.green{color:var(--green);background:var(--green-dim)}
+.tag.amber{color:var(--amber);background:var(--amber-dim)}
+.tag.red{color:var(--red);background:var(--red-dim)}
+.tag.blue{color:var(--blue);background:var(--blue-dim)}
+
+/* ─── CHECKLIST ─────────────────────────────────────────────── */
+.checklist{list-style:none;margin-bottom:8px}
+.checklist li{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:7px 0;
+  border-bottom:1px solid var(--bg-2);
+  font-size:13px;
+  cursor:pointer;
+  user-select:none;
+}
+.checklist li:last-child{border-bottom:none}
+.checklist .cb{
+  flex-shrink:0;
+  width:18px;height:18px;margin-top:2px;
+  border:2px solid var(--border);
+  border-radius:4px;
+  background:var(--bg-2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:transparent;
+  transition:all var(--transition);
+}
+.checklist li.checked .cb{
+  background:var(--green);
+  border-color:var(--green);
+  color:#000;
+  box-shadow:var(--accent-glow);
+}
+.checklist .cb-label{color:var(--text)}
+.checklist li.checked .cb-label{color:var(--text-muted);text-decoration:line-through}
+
+/* ─── PROGRESS BAR ─────────────────────────────────────────── */
+.progress-wrap{
+  position:sticky;top:0;z-index:50;
+  background:rgba(10,12,15,.88);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  padding:10px 24px;
+  display:flex;align-items:center;gap:16px;
+}
+.progress-wrap .p-label{font-size:11px;color:var(--text-muted);white-space:nowrap}
+.progress-track{flex:1;height:4px;background:var(--bg-2);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;width:0%;background:var(--green);border-radius:2px;transition:width .4s ease;box-shadow:var(--accent-glow)}
+.progress-wrap .p-pct{font-size:12px;font-weight:600;color:var(--green);min-width:38px;text-align:right}
+
+/* ─── FOOTER ────────────────────────────────────────────────── */
+footer{
+  text-align:center;
+  padding:40px 24px 32px;
+  border-top:1px solid var(--border);
+  color:var(--text-muted);
+  font-size:12px;
+}
+footer span{color:var(--green)}
+
+/* ─── SCROLLBAR ─────────────────────────────────────────────── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg-1)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#3a4a5a}
+
+/* ─── RESPONSIVE ────────────────────────────────────────────── */
+@media(max-width:600px){
+  .hero{padding:48px 18px 40px}
+  .wrapper{padding:32px 16px 80px}
+  .step-inner,.terminal-body{padding-left:14px;padding-right:14px}
+}
+</style>
+</head>
+<body>
+
+<!-- ── STICKY PROGRESS ─────────────────────────────────────── -->
+<div class="progress-wrap">
+  <span class="p-label">Testing Progress</span>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <span class="p-pct" id="progressPct">0%</span>
+</div>
+
+<!-- ── HERO ─────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-badge"><span class="dot"></span>Testing Playbook</div>
+  <h1>RiskSentinel<br/><span>Test Everything.</span></h1>
+  <p>A zero-ambiguity, copy-paste-ready guide. Every command, every expected output, every edge case — in the exact order you need them. Tick each step as you go.</p>
+</section>
+
+<!-- ── MAIN ─────────────────────────────────────────────────── -->
+<div class="wrapper">
+
+<!-- ═══════════════ PHASE: PRE-FLIGHT ═══════════════════════ -->
+<div class="phase-label"><span class="phase-tag">Phase 1 — Pre-Flight</span><div class="phase-line"></div></div>
+
+<!-- STEP 1 -->
+<div class="step" data-step="1">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">1</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">Clone & Create Directories</div>
+      <div class="step-meta">Set up the workspace structure in VS Code</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <p class="prose">If you extracted the ZIP (rather than a git clone), the inner folders already exist. Run these only if something is missing:</p>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-comment"># Navigate into the project root first</span>
+<span class="c-prompt">PS&gt; </span><span class="c-cmd">cd RiskSentinel</span>
+
+<span class="c-comment"># Recreate every sub-directory (Force = no error if exists)</span>
+<span class="c-prompt">PS&gt; </span><span class="c-cmd">New-Item -ItemType Directory -Path "app\api\routes"   -Force</span>
+<span class="c-prompt">PS&gt; </span><span class="c-cmd">New-Item -ItemType Directory -Path "app\services"     -Force</span>
+<span class="c-prompt">PS&gt; </span><span class="c-cmd">New-Item -ItemType Directory -Path "app\models"       -Force</span>
+<span class="c-prompt">PS&gt; </span><span class="c-cmd">New-Item -ItemType Directory -Path "app\rules"        -Force</span>
+<span class="c-prompt">PS&gt; </span><span class="c-cmd">New-Item -ItemType Directory -Path "ml\models"        -Force</span>
+<span class="c-prompt">PS&gt; </span><span class="c-cmd">New-Item -ItemType Directory -Path "infra\k8s"        -Force</span>
+<span class="c-prompt">PS&gt; </span><span class="c-cmd">New-Item -ItemType Directory -Path "infra\migrations"  -Force</span>
+<span class="c-prompt">PS&gt; </span><span class="c-cmd">New-Item -ItemType Directory -Path "tests"            -Force</span></div>
+    </div>
+    <ul class="checklist"><li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">All directories confirmed present in VS Code Explorer</span></li></ul>
+  </div></div>
+</div>
+
+<!-- STEP 2 -->
+<div class="step" data-step="2">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">2</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">Create the Virtual Environment & Install Deps</div>
+      <div class="step-meta">Python 3.12 required · ~30 seconds</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <div class="info-box note"><span class="ib-icon">💡</span><div class="ib-text"><strong>Why a venv?</strong> Keeps RiskSentinel's dependencies completely isolated from your global Python. No conflicts, no surprises.</div></div>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-prompt">PS&gt; </span><span class="c-cmd">python -m venv .venv</span>
+<span class="c-prompt">PS&gt; </span><span class="c-cmd">.venv\Scripts\Activate</span>
+<span class="c-comment"># Prompt changes to (.venv) PS&gt;  — that means it worked</span>
+<span class="c-prompt">(.venv) PS&gt; </span><span class="c-cmd">pip install -r requirements.txt</span></div>
+    </div>
+    <div class="expected">
+      <div class="expected-label">Expected — last few lines</div>
+      <pre><span class="c-success">Successfully installed</span> fastapi uvicorn sqlalchemy asyncpg aiokafka scikit-learn numpy httpx pydantic-settings alembic ruff mypy pytest pytest-asyncio ...</pre>
+    </div>
+    <ul class="checklist">
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">No <span style="color:var(--red)">ERROR</span> lines during install</span></li>
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">Prompt shows <code>(.venv)</code> prefix</span></li>
+    </ul>
+  </div></div>
+</div>
+
+<!-- STEP 3 -->
+<div class="step" data-step="3">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">3</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">Copy & Verify the .env File</div>
+      <div class="step-meta">Environment configuration · 10 seconds</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-prompt">PS&gt; </span><span class="c-cmd">Copy-Item .env.example .env</span>
+<span class="c-comment"># Verify it landed</span>
+<span class="c-prompt">PS&gt; </span><span class="c-cmd">Get-Content .env</span></div>
+    </div>
+    <div class="info-box tip"><span class="ib-icon">✅</span><div class="ib-text"><strong>For local testing the defaults are fine.</strong> DATABASE_URL, Kafka, thresholds — everything points at localhost. No edits required right now.</div></div>
+    <ul class="checklist"><li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">.env file exists and prints its contents</span></li></ul>
+  </div></div>
+</div>
+
+<!-- ═══════════════ PHASE: ML TRAINING ═══════════════════════ -->
+<div class="phase-label"><span class="phase-tag">Phase 2 — Train the ML Model</span><div class="phase-line"></div></div>
+
+<!-- STEP 4 -->
+<div class="step" data-step="4">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">4</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">Train the IsolationForest</div>
+      <div class="step-meta">Generates synthetic SA data · produces the .pkl model · 5–15 seconds</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <p class="prose">This one-shot script synthesises 8 500 transactions (8 000 normal + 500 fraud-patterned), trains the model, evaluates accuracy, and dumps two files into <code>ml/models/</code>.</p>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-prompt">(.venv) PS&gt; </span><span class="c-cmd">python -m ml.train</span></div>
+    </div>
+    <div class="expected">
+      <div class="expected-label">Expected output (sample)</div>
+      <pre>Generating synthetic data …
+Training on 6800 samples …
+
+              <span class="c-success">precision    recall  f1-score   support</span>
+
+     fraud       0.89      0.82      0.85      100
+    normal       0.97      0.98      0.98      600
+
+<span class="c-success">Model saved → ml/models/anomaly_model.pkl</span>
+<span class="c-success">Report saved → ml/models/training_report.json</span></pre>
+    </div>
+    <ul class="checklist">
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label"><code>ml/models/anomaly_model.pkl</code> exists</span></li>
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label"><code>ml/models/training_report.json</code> exists</span></li>
+    </ul>
+  </div></div>
+</div>
+
+<!-- ═══════════════ PHASE: STACK UP ═════════════════════════ -->
+<div class="phase-label"><span class="phase-tag">Phase 3 — Spin Up the Stack</span><div class="phase-line"></div></div>
+
+<!-- STEP 5 -->
+<div class="step" data-step="5">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">5</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">Docker Compose — Full Stack</div>
+      <div class="step-meta">PostgreSQL + Zookeeper + Kafka + Seed + API · 30–60 seconds</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <div class="info-box warn"><span class="ib-icon">⚠️</span><div class="ib-text"><strong>Docker Desktop must be running.</strong> If it isn't, open it and wait for the whale icon to stop spinning before continuing.</div></div>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-prompt">(.venv) PS&gt; </span><span class="c-cmd">docker compose up --build</span></div>
+    </div>
+    <p class="prose">Keep this terminal open and visible. You'll watch five services come alive in sequence.</p>
+    <div class="expected">
+      <div class="expected-label">What you'll see (in order)</div>
+      <pre><span class="c-out">rs-postgres  | … database system is ready to accept connections</span>
+<span class="c-out">rs-zookeeper | … binding to port 2181</span>
+<span class="c-out">rs-kafka     | … Kafka started</span>
+<span class="c-out">rs-seed      | … Seed complete — 7 rules inserted.</span>
+<span class="c-success">rs-api       | … Uvicorn running on http://0.0.0.0:8000</span></pre>
+    </div>
+    <div class="info-box tip"><span class="ib-icon">✅</span><div class="ib-text"><strong>Seed exits on its own</strong> — that's normal. It inserts the 7 default fraud rules once and stops. Everything else stays running.</div></div>
+    <ul class="checklist">
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">No container in <span style="color:var(--red)">ERROR</span> state</span></li>
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">Seed printed "7 rules inserted"</span></li>
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">API logged "Uvicorn running"</span></li>
+    </ul>
+  </div></div>
+</div>
+
+<!-- ═══════════════ PHASE: SMOKE TESTS ═══════════════════════ -->
+<div class="phase-label"><span class="phase-tag">Phase 4 — Smoke Tests</span><div class="phase-line"></div></div>
+
+<!-- STEP 6 -->
+<div class="step" data-step="6">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">6</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">Health Check</div>
+      <div class="step-meta">Verify the API is alive and all subsystems are green</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <p class="prose">Open a <strong>second PowerShell window</strong> (or a new terminal in VS Code). The first one is still streaming Docker logs — leave it.</p>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell — New Window</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-prompt">PS&gt; </span><span class="c-cmd">Invoke-RestMethod http://localhost:8000/api/v1/health/</span></div>
+    </div>
+    <div class="expected">
+      <div class="expected-label">Expected response</div>
+      <pre>{
+  <span class="c-str">"status"</span>          : <span class="c-success">"healthy"</span>,
+  <span class="c-str">"db"</span>               : <span class="c-success">"healthy"</span>,
+  <span class="c-str">"kafka"</span>            : <span class="c-success">"healthy"</span>,
+  <span class="c-str">"uptime_seconds"</span>   : 12.45,
+  <span class="c-str">"version"</span>          : <span class="c-success">"1.0.0"</span>
+}</pre>
+    </div>
+    <ul class="checklist">
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">All three fields read <code style="color:var(--green)">healthy</code></span></li>
+    </ul>
+  </div></div>
+</div>
+
+<!-- STEP 7 -->
+<div class="step" data-step="7">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">7</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">List Default Fraud Rules</div>
+      <div class="step-meta">Confirm the seed loaded all 7 rules</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-prompt">PS&gt; </span><span class="c-cmd">Invoke-RestMethod http://localhost:8000/api/v1/rules/</span></div>
+    </div>
+    <div class="expected">
+      <div class="expected-label">You should see 7 rule objects</div>
+      <pre>code                        name                              weight  is_active
+────                        ────                              ──────  ─────────
+<span class="c-success">RULE_HIGH_AMOUNT</span>           High-Value Transaction            0.25    True
+<span class="c-success">RULE_CRITICAL_AMOUNT</span>       Critical-Value Transaction        0.45    True
+<span class="c-success">RULE_SUSPICIOUS_MERCHANT</span>   Suspicious Merchant Category      0.20    True
+<span class="c-success">RULE_API_NO_FINGERPRINT</span>     API Channel — No Device FP       0.15    True
+<span class="c-success">RULE_FOREIGN_IP_FLAG</span>       Foreign IP Flag                   0.18    True
+<span class="c-success">RULE_REPEAT_RECEIVER</span>       Repeat Receiver (metadata flag)   0.15    True
+<span class="c-success">RULE_ZERO_AMOUNT</span>           Zero-Amount Probe                 0.30    True</pre>
+    </div>
+    <ul class="checklist"><li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">Exactly 7 rules, all <code style="color:var(--green)">is_active = True</code></span></li></ul>
+  </div></div>
+</div>
+
+<!-- ═══════════════ PHASE: CORE SCORING ═══════════════════════ -->
+<div class="phase-label"><span class="phase-tag">Phase 5 — Core Scoring Scenarios</span><div class="phase-line"></div></div>
+
+<!-- STEP 8 -->
+<div class="step" data-step="8">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">8</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">Submit a LOW-Risk Transaction</div>
+      <div class="step-meta">Normal ZAR 1 000 mobile-banking payment</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-prompt">PS&gt; </span><span class="c-cmd">Invoke-RestMethod</span> <span class="c-flag">-Uri</span> <span class="c-str">http://localhost:8000/api/v1/transactions/</span> `
+  <span class="c-flag">-Method</span> POST `
+  <span class="c-flag">-ContentType</span> application/json `
+  <span class="c-flag">-Body</span> <span class="c-str">'{"sender_id":"alice_001","receiver_id":"bob_002","amount_zar":1000,"channel":"mobile_banking","merchant_category":"grocery"}'</span></div>
+    </div>
+    <div class="expected">
+      <div class="expected-label">Expected — key fields</div>
+      <pre>{
+  <span class="c-str">"status"</span>           : <span class="c-success">"pending"</span>,   <span class="c-comment"># not flagged</span>
+  <span class="c-str">"risk_level"</span>       : <span class="c-success">"LOW"</span>,
+  <span class="c-str">"composite_score"</span>  : <span class="c-success">0.xxxx</span>   <span class="c-comment"># well below 0.4</span>
+}</pre>
+    </div>
+    <ul class="checklist">
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">risk_level is <code style="color:var(--green)">LOW</code> and status is <code>pending</code></span></li>
+    </ul>
+  </div></div>
+</div>
+
+<!-- STEP 9 -->
+<div class="step" data-step="9">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">9</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">Submit a HIGH-Risk Transaction</div>
+      <div class="step-meta">ZAR 75 000 — should trigger RULE_HIGH_AMOUNT</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-prompt">PS&gt; </span><span class="c-cmd">Invoke-RestMethod</span> <span class="c-flag">-Uri</span> <span class="c-str">http://localhost:8000/api/v1/transactions/</span> `
+  <span class="c-flag">-Method</span> POST `
+  <span class="c-flag">-ContentType</span> application/json `
+  <span class="c-flag">-Body</span> <span class="c-str">'{"sender_id":"carol_007","receiver_id":"dave_010","amount_zar":75000,"channel":"mobile_banking","merchant_category":"electronics"}'</span></div>
+    </div>
+    <div class="expected">
+      <div class="expected-label">Expected — key fields</div>
+      <pre>{
+  <span class="c-str">"status"</span>           : <span class="c-warn">"flagged"</span>,
+  <span class="c-str">"risk_level"</span>       : <span class="c-warn">"HIGH"</span>,
+  <span class="c-str">"composite_score"</span>  : <span class="c-warn">0.7x – 0.8x</span>
+}</pre>
+    </div>
+    <ul class="checklist">
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">risk_level is <code style="color:var(--amber)">HIGH</code> and status is <code style="color:var(--amber)">flagged</code></span></li>
+    </ul>
+  </div></div>
+</div>
+
+<!-- STEP 10 -->
+<div class="step" data-step="10">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">10</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">Submit a CRITICAL-Risk Transaction</div>
+      <div class="step-meta">ZAR 250 000 to a suspicious merchant — maximum heat</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-prompt">PS&gt; </span><span class="c-cmd">Invoke-RestMethod</span> <span class="c-flag">-Uri</span> <span class="c-str">http://localhost:8000/api/v1/transactions/</span> `
+  <span class="c-flag">-Method</span> POST `
+  <span class="c-flag">-ContentType</span> application/json `
+  <span class="c-flag">-Body</span> <span class="c-str">'{"sender_id":"eve_666","receiver_id":"frank_999","amount_zar":250000,"channel":"api","merchant_category":"cryptocurrency_exchange","metadata":{"ip_country_flagged":"true"}}'</span></div>
+    </div>
+    <div class="expected">
+      <div class="expected-label">Expected — key fields</div>
+      <pre>{
+  <span class="c-str">"status"</span>           : <span class="c-err">"flagged"</span>,
+  <span class="c-str">"risk_level"</span>       : <span class="c-err">"CRITICAL"</span>,
+  <span class="c-str">"composite_score"</span>  : <span class="c-err">0.9x – 1.0</span>
+}</pre>
+    </div>
+    <div class="info-box warn"><span class="ib-icon">⚡</span><div class="ib-text"><strong>This one stacks three rules at once:</strong> RULE_CRITICAL_AMOUNT (0.45) + RULE_SUSPICIOUS_MERCHANT (0.20) + RULE_FOREIGN_IP_FLAG (0.18). The velocity and anomaly signals add on top.</div></div>
+    <ul class="checklist">
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">risk_level is <code style="color:var(--red)">CRITICAL</code></span></li>
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">composite_score ≥ 0.9</span></li>
+    </ul>
+  </div></div>
+</div>
+
+<!-- ═══════════════ PHASE: EXPLAINABILITY ═══════════════════ -->
+<div class="phase-label"><span class="phase-tag">Phase 6 — Explainability & Audit</span><div class="phase-line"></div></div>
+
+<!-- STEP 11 -->
+<div class="step" data-step="11">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">11</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">Pull the Full Score Breakdown</div>
+      <div class="step-meta">The "why" behind the number — this is what fintech interviewers love</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <p class="prose">Grab the <code>id</code> from the CRITICAL transaction you just created (Step 10) and drop it into the URL below. If you didn't save it, run the list endpoint first and pull the top result.</p>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-comment"># Replace YOUR_TXN_ID with the actual UUID</span>
+<span class="c-prompt">PS&gt; </span><span class="c-cmd">Invoke-RestMethod</span> <span class="c-str">http://localhost:8000/api/v1/transactions/YOUR_TXN_ID/score</span></div>
+    </div>
+    <div class="expected">
+      <div class="expected-label">Expected — full explanation object</div>
+      <pre>{
+  <span class="c-str">"composite_score"</span> : 0.9412,
+  <span class="c-str">"risk_level"</span>      : <span class="c-err">"CRITICAL"</span>,
+  <span class="c-str">"rule_score"</span>      : 0.83,
+  <span class="c-str">"velocity_score"</span>  : 0.00,   <span class="c-comment"># first txn from this sender</span>
+  <span class="c-str">"anomaly_score"</span>   : 0.00,   <span class="c-comment"># no history yet</span>
+  <span class="c-str">"triggered_rules"</span> : ["RULE_CRITICAL_AMOUNT","RULE_SUSPICIOUS_MERCHANT","RULE_FOREIGN_IP_FLAG"],
+  <span class="c-str">"explanation"</span>     : {
+      <span class="c-str">"rules"</span>    : { … per-rule fired/weight … },
+      <span class="c-str">"velocity"</span> : { <span class="c-str">"txn_count_in_window"</span>: 0, … },
+      <span class="c-str">"anomaly"</span>  : { <span class="c-str">"note"</span>: "Insufficient history …" }
+  }
+}</pre>
+    </div>
+    <ul class="checklist">
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label"><code>triggered_rules</code> lists every rule that fired</span></li>
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label"><code>explanation</code> block is fully populated</span></li>
+    </ul>
+  </div></div>
+</div>
+
+<!-- ═══════════════ PHASE: ALERTS ═════════════════════════════ -->
+<div class="phase-label"><span class="phase-tag">Phase 7 — Alerts & Analyst Workflow</span><div class="phase-line"></div></div>
+
+<!-- STEP 12 -->
+<div class="step" data-step="12">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">12</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">List Open Alerts</div>
+      <div class="step-meta">Confirm the HIGH and CRITICAL transactions generated alerts</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-prompt">PS&gt; </span><span class="c-cmd">Invoke-RestMethod</span> <span class="c-str">"http://localhost:8000/api/v1/alerts/?severity=CRITICAL"</span></div>
+    </div>
+    <div class="expected">
+      <div class="expected-label">Expected</div>
+      <pre>{
+  <span class="c-str">"total"</span>: 1,
+  <span class="c-str">"items"</span>: [{
+      <span class="c-str">"severity"</span>   : <span class="c-err">"CRITICAL"</span>,
+      <span class="c-str">"alert_type"</span> : "FRAUD_SUSPECTED",
+      <span class="c-str">"status"</span>     : "open",
+      <span class="c-str">"message"</span>    : "Transaction … scored 0.94 [CRITICAL]. …"
+  }]
+}</pre>
+    </div>
+    <ul class="checklist"><li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">At least one CRITICAL alert in <code>open</code> status</span></li></ul>
+  </div></div>
+</div>
+
+<!-- STEP 13 -->
+<div class="step" data-step="13">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">13</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">Acknowledge & Assign an Alert</div>
+      <div class="step-meta">Simulate the analyst triage workflow</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <p class="prose">Grab the <code>id</code> of the CRITICAL alert from Step 12 and paste it below:</p>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-comment"># Replace YOUR_ALERT_ID</span>
+<span class="c-prompt">PS&gt; </span><span class="c-cmd">Invoke-RestMethod</span> <span class="c-flag">-Uri</span> <span class="c-str">"http://localhost:8000/api/v1/alerts/YOUR_ALERT_ID"</span> `
+  <span class="c-flag">-Method</span> PATCH `
+  <span class="c-flag">-ContentType</span> application/json `
+  <span class="c-flag">-Body</span> <span class="c-str">'{"status":"acknowledged","assigned_to":"analyst@risksentinel.io"}'</span></div>
+    </div>
+    <div class="expected">
+      <div class="expected-label">Expected</div>
+      <pre>{
+  <span class="c-str">"status"</span>      : <span class="c-success">"acknowledged"</span>,
+  <span class="c-str">"assigned_to"</span> : "analyst@risksentinel.io"
+}</pre>
+    </div>
+    <ul class="checklist"><li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">Status flipped to <code style="color:var(--green)">acknowledged</code> and analyst is assigned</span></li></ul>
+  </div></div>
+</div>
+
+<!-- ═══════════════ PHASE: RULES CRUD ══════════════════════ -->
+<div class="phase-label"><span class="phase-tag">Phase 8 — Dynamic Rules CRUD</span><div class="phase-line"></div></div>
+
+<!-- STEP 14 -->
+<div class="step" data-step="14">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">14</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">Create → Patch → Delete a Custom Rule</div>
+      <div class="step-meta">Full lifecycle of a dynamic fraud rule — zero code changes</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <p class="prose"><strong>Create</strong> — a brand-new rule that flags any USSD transaction over ZAR 5 000:</p>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell — Create</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-prompt">PS&gt; </span><span class="c-cmd">Invoke-RestMethod</span> <span class="c-flag">-Uri</span> <span class="c-str">http://localhost:8000/api/v1/rules/</span> `
+  <span class="c-flag">-Method</span> POST `
+  <span class="c-flag">-ContentType</span> application/json `
+  <span class="c-flag">-Body</span> <span class="c-str">'{"code":"RULE_USSD_HIGH","name":"USSD High Value","weight":0.22,"condition":{"and":[{"field":"channel","operator":"eq","target":"ussd"},{"field":"amount_zar","operator":"gt","threshold":5000}]}}'</span></div>
+    </div>
+    <p class="prose" style="margin-top:12px"><strong>Patch</strong> — cut the weight down and keep it active:</p>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell — Patch (replace YOUR_RULE_ID)</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-prompt">PS&gt; </span><span class="c-cmd">Invoke-RestMethod</span> <span class="c-flag">-Uri</span> <span class="c-str">"http://localhost:8000/api/v1/rules/YOUR_RULE_ID"</span> `
+  <span class="c-flag">-Method</span> PATCH `
+  <span class="c-flag">-ContentType</span> application/json `
+  <span class="c-flag">-Body</span> <span class="c-str">'{"weight":0.10,"is_active":true}'</span></div>
+    </div>
+    <p class="prose" style="margin-top:12px"><strong>Delete (soft)</strong> — deactivates, never truly erased:</p>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell — Delete</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-prompt">PS&gt; </span><span class="c-cmd">Invoke-RestMethod</span> <span class="c-flag">-Uri</span> <span class="c-str">"http://localhost:8000/api/v1/rules/YOUR_RULE_ID"</span> <span class="c-flag">-Method</span> DELETE</div>
+    </div>
+    <div class="expected">
+      <div class="expected-label">Verify soft-delete</div>
+      <pre><span class="c-prompt">PS&gt; </span>Invoke-RestMethod "http://localhost:8000/api/v1/rules/YOUR_RULE_ID"
+  → <span class="c-str">"is_active"</span> : <span class="c-err">false</span>   <span class="c-comment"># still in DB, just off</span></pre>
+    </div>
+    <ul class="checklist">
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">Rule created with 201 status</span></li>
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">PATCH returned weight = 0.10</span></li>
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">DELETE returned 204 and GET shows is_active = false</span></li>
+    </ul>
+  </div></div>
+</div>
+
+<!-- ═══════════════ PHASE: VELOCITY ═════════════════════════ -->
+<div class="phase-label"><span class="phase-tag">Phase 9 — Velocity Breach</span><div class="phase-line"></div></div>
+
+<!-- STEP 15 -->
+<div class="step" data-step="15">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">15</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">Flood a Single Sender — Trigger Velocity</div>
+      <div class="step-meta">11 rapid transactions from one identity within the 5-min window</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <p class="prose">The velocity window allows max <strong>10 transactions</strong> in 5 minutes. This loop fires 11 in quick succession. The 11th will cross the threshold — watch the score climb.</p>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell — Velocity Flood Loop</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-prompt">PS&gt; </span><span class="c-cmd">for</span> ($i = 1; $i -le 11; $i++) {
+      $body = @{
+          sender_id    = <span class="c-str">"velocity_test_sender"</span>
+          receiver_id  = <span class="c-str">"receiver_$i"</span>
+          amount_zar   = 5000
+          channel      = <span class="c-str">"mobile_banking"</span>
+      } | ConvertTo-Json
+      $resp = Invoke-RestMethod <span class="c-flag">-Uri</span> <span class="c-str">http://localhost:8000/api/v1/transactions/</span> `
+          <span class="c-flag">-Method</span> POST <span class="c-flag">-ContentType</span> application/json <span class="c-flag">-Body</span> $body
+      Write-Host <span class="c-str">"Txn $i → risk_level=$($resp.risk_level) score=$($resp.composite_score)"</span>
+  }</div>
+    </div>
+    <div class="expected">
+      <div class="expected-label">Expected — last few lines</div>
+      <pre>Txn  9  → risk_level=LOW    score=0.28xx
+Txn 10  → risk_level=MEDIUM score=0.45xx
+<span class="c-warn">Txn 11  → risk_level=HIGH   score=0.7x</span>   <span class="c-comment"># velocity breached</span></pre>
+    </div>
+    <ul class="checklist">
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">Score visibly climbs across the 11 transactions</span></li>
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">Final transaction is HIGH or CRITICAL</span></li>
+    </ul>
+  </div></div>
+</div>
+
+<!-- ═══════════════ PHASE: DASHBOARD ═══════════════════════ -->
+<div class="phase-label"><span class="phase-tag">Phase 10 — Dashboard & Swagger</span><div class="phase-line"></div></div>
+
+<!-- STEP 16 -->
+<div class="step" data-step="16">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">16</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">Pull the Dashboard KPIs</div>
+      <div class="step-meta">Aggregated summary — total txns, open alerts, avg score, top risks</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-prompt">PS&gt; </span><span class="c-cmd">Invoke-RestMethod</span> <span class="c-str">http://localhost:8000/api/v1/dashboard/summary</span></div>
+    </div>
+    <div class="expected">
+      <div class="expected-label">Expected shape</div>
+      <pre>{
+  <span class="c-str">"total_transactions"</span>            : 14,   <span class="c-comment"># or however many you've submitted</span>
+  <span class="c-str">"total_alerts_open"</span>             : 2,
+  <span class="c-str">"total_alerts_critical"</span>         : 1,
+  <span class="c-str">"avg_risk_score"</span>                : 0.3xxx,
+  <span class="c-str">"top_risk_transactions"</span>         : [ … top 5 … ],
+  <span class="c-str">"alert_distribution"</span>            : { "HIGH": 1, "CRITICAL": 1 },
+  <span class="c-str">"velocity_breaches_last_hour"</span>   : 1
+}</pre>
+    </div>
+    <ul class="checklist">
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">total_transactions matches what you submitted</span></li>
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">top_risk_transactions has the CRITICAL one at position 0</span></li>
+    </ul>
+  </div></div>
+</div>
+
+<!-- STEP 17 -->
+<div class="step" data-step="17">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">17</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">Open Swagger UI & Redoc</div>
+      <div class="step-meta">Browser — interactive API docs baked in</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <p class="prose">Drop these two URLs into any browser. No install, no setup — FastAPI auto-generates them:</p>
+    <div class="tbl-wrap"><table>
+      <tr><th>Doc Style</th><th>URL</th><th>What to Look For</th></tr>
+      <tr><td><span class="tag blue">Swagger</span></td><td><code>http://localhost:8000/docs</code></td><td>All 14 endpoints listed, "Try it out" buttons everywhere</td></tr>
+      <tr><td><span class="tag green">ReDoc</span></td><td><code>http://localhost:8000/redoc</code></td><td>Beautiful two-panel docs with request/response schemas</td></tr>
+    </table></div>
+    <ul class="checklist">
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">Swagger shows all 5 tag groups (Transactions, Alerts, Rules, Dashboard, Health)</span></li>
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">ReDoc renders with schemas</span></li>
+    </ul>
+  </div></div>
+</div>
+
+<!-- ═══════════════ PHASE: AUTOMATED TESTS ═══════════════════ -->
+<div class="phase-label"><span class="phase-tag">Phase 11 — Automated Test Suite</span><div class="phase-line"></div></div>
+
+<!-- STEP 18 -->
+<div class="step" data-step="18">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">18</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">Install Test Deps & Run pytest</div>
+      <div class="step-meta">30+ unit + integration tests · runs against in-memory SQLite · no Docker required</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <div class="info-box note"><span class="ib-icon">💡</span><div class="ib-text"><strong>These tests run entirely in-memory.</strong> Kafka is mocked. No Docker stack needed. You can run them standalone at any time.</div></div>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-prompt">(.venv) PS&gt; </span><span class="c-cmd">pip install aiosqlite</span>         <span class="c-comment"># only extra dep for in-memory async SQLite</span>
+<span class="c-prompt">(.venv) PS&gt; </span><span class="c-cmd">pytest tests/ -v --tb=short</span></div>
+    </div>
+    <div class="expected">
+      <div class="expected-label">Expected tail</div>
+      <pre><span class="c-success">tests/test_risksentinel.py::TestFieldExtractor::test_simple_field          PASSED</span>
+<span class="c-success">tests/test_risksentinel.py::TestFieldExtractor::test_nested_jsonb           PASSED</span>
+<span class="c-success">tests/test_risksentinel.py::TestRulesEngine::test_single_rule_fires         PASSED</span>
+<span class="c-success">tests/test_risksentinel.py::TestRulesEngine::test_and_combinator            PASSED</span>
+<span class="c-success">tests/test_risksentinel.py::TestRulesEngine::test_or_combinator             PASSED</span>
+<span class="c-success">tests/test_risksentinel.py::TestRulesEngine::test_in_operator               PASSED</span>
+<span class="c-success">tests/test_risksentinel.py::TestDefaultRules::test_all_default_rules_are_valid PASSED</span>
+<span class="c-success">tests/test_risksentinel.py::TestRiskLevelClassification::test_critical      PASSED</span>
+<span class="c-success">tests/test_risksentinel.py::TestTransactionsAPI::test_create_transaction    PASSED</span>
+<span class="c-success">tests/test_risksentinel.py::TestRulesAPI::test_create_and_list_rules        PASSED</span>
+<span class="c-success">tests/test_risksentinel.py::TestRulesAPI::test_patch_rule_deactivate        PASSED</span>
+<span class="c-success">tests/test_risksentinel.py::TestDashboardAPI::test_summary_returns_structure PASSED</span>
+  …
+<span class="c-success">====== 30+ passed in 4.2s ======</span></pre>
+    </div>
+    <ul class="checklist">
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">Zero failures, zero errors</span></li>
+      <li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">All test classes present (Rules, Velocity, Scorer, API, Dashboard)</span></li>
+    </ul>
+  </div></div>
+</div>
+
+<!-- ═══════════════ PHASE: TEARDOWN ═══════════════════════════ -->
+<div class="phase-label"><span class="phase-tag">Phase 12 — Teardown</span><div class="phase-line"></div></div>
+
+<!-- STEP 19 -->
+<div class="step" data-step="19">
+  <div class="step-header" onclick="toggleStep(this)">
+    <div class="step-number"><span class="num">19</span><span class="check">✓</span></div>
+    <div class="step-title-wrap">
+      <div class="step-title">Stop & Clean Up</div>
+      <div class="step-meta">Kill containers, purge volumes — back to a blank slate</div>
+    </div>
+    <svg class="step-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="step-body"><div class="step-inner">
+    <p class="prose">Go back to the terminal where <code>docker compose up</code> is running and hit <kbd>Ctrl + C</kbd>. Then run:</p>
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span class="label">PowerShell — Original Docker Terminal</span>
+        <button class="copy-btn" onclick="copyTerminal(this)">Copy</button>
+      </div>
+      <div class="terminal-body"><span class="c-comment"># Stop containers</span>
+<span class="c-prompt">PS&gt; </span><span class="c-cmd">docker compose down</span>
+
+<span class="c-comment"># Also nuke the Postgres volume (data wipe) — optional</span>
+<span class="c-prompt">PS&gt; </span><span class="c-cmd">docker compose down -v</span></div>
+    </div>
+    <div class="expected">
+      <div class="expected-label">Expected</div>
+      <pre><span class="c-success">Stopping rs-api       … done</span>
+<span class="c-success">Stopping rs-kafka     … done</span>
+<span class="c-success">Stopping rs-zookeeper … done</span>
+<span class="c-success">Stopping rs-postgres  … done</span>
+<span class="c-success">Removing rs-seed      … done</span></pre>
+    </div>
+    <ul class="checklist"><li onclick="tickCheck(this)"><span class="cb">✓</span><span class="cb-label">All containers removed — <code>docker ps -a</code> shows nothing with "rs-"</span></li></ul>
+  </div></div>
+</div>
+
+<!-- QUICK REFERENCE TABLE -->
+<div style="margin-top:56px">
+  <div class="phase-label"><span class="phase-tag">Quick Reference</span><div class="phase-line"></div></div>
+  <div class="tbl-wrap"><table>
+    <tr><th>Endpoint</th><th>Method</th><th>What It Tests</th><th>Risk Level</th></tr>
+    <tr><td><code>/api/v1/transactions/</code></td><td><span class="tag blue">POST</span></td><td>Submit + score in one shot</td><td>Varies</td></tr>
+    <tr><td><code>/api/v1/transactions/{id}/score</code></td><td><span class="tag blue">GET</span></td><td>Full explainable breakdown</td><td>—</td></tr>
+    <tr><td><code>/api/v1/alerts/</code></td><td><span class="tag blue">GET</span></td><td>Open alert queue</td><td>—</td></tr>
+    <tr><td><code>/api/v1/alerts/{id}</code></td><td><span class="tag green">PATCH</span></td><td>Analyst triage (ack / resolve)</td><td>—</td></tr>
+    <tr><td><code>/api/v1/rules/</code></td><td><span class="tag blue">POST</span></td><td>Live rule creation</td><td>—</td></tr>
+    <tr><td><code>/api/v1/rules/{id}</code></td><td><span class="tag green">PATCH</span></td><td>Toggle / reweight</td><td>—</td></tr>
+    <tr><td><code>/api/v1/dashboard/summary</code></td><td><span class="tag blue">GET</span></td><td>KPI aggregation</td><td>—</td></tr>
+    <tr><td><code>/api/v1/health/</code></td><td><span class="tag blue">GET</span></td><td>Liveness probe</td><td>—</td></tr>
+  </table></div>
+</div>
+
+</div><!-- /wrapper -->
+
+<footer>Built for <span>RiskSentinel</span> — Real-Time Fraud & Risk Detection Engine</footer>
+
+<!-- ── JS ──────────────────────────────────────────────────── -->
+<script>
+// ── Step toggle ───────────────────────────────────────────────
+function toggleStep(header){
+  const step = header.closest('.step');
+  const wasOpen = step.classList.contains('open');
+  // close all
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('open','active'));
+  // open this one (if it wasn't already open)
+  if(!wasOpen){
+    step.classList.add('open','active');
+  }
+}
+
+// ── Checklist ticks + progress ────────────────────────────────
+const TOTAL_CHECKS = 0; // computed below
+let totalChecks = 0;
+let doneChecks  = 0;
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  totalChecks = document.querySelectorAll('.checklist li').length;
+  updateProgress();
+});
+
+function tickCheck(li){
+  li.classList.toggle('checked');
+  doneChecks = document.querySelectorAll('.checklist li.checked').length;
+  updateProgress();
+
+  // auto mark parent step as "done" if all its checks are ticked
+  const step = li.closest('.step');
+  const checks = step.querySelectorAll('.checklist li');
+  const allDone = [...checks].every(c => c.classList.contains('checked'));
+  if(allDone) step.classList.add('done');
+  else        step.classList.remove('done');
+}
+
+function updateProgress(){
+  const pct = totalChecks ? Math.round((doneChecks/totalChecks)*100) : 0;
+  document.getElementById('progressFill').style.width = pct+'%';
+  document.getElementById('progressPct').textContent   = pct+'%';
+}
+
+// ── Copy to clipboard ─────────────────────────────────────────
+function copyTerminal(btn){
+  const body = btn.closest('.terminal').querySelector('.terminal-body');
+  // grab plain text, strip the PS> prompts for clean paste
+  let text = body.innerText;
+  // Remove prompt prefixes for cleaner paste
+  text = text.split('\n')
+    .map(l => l.replace(/^(\.venv\s+)?PS>\s*/, ''))
+    .join('\n')
+    .trim();
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(()=>{
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 1600);
+  });
+}
+
+// ── Open first step on load ──────────────────────────────────
+document.addEventListener('DOMContentLoaded', ()=>{
+  const first = document.querySelector('.step');
+  if(first) first.classList.add('open','active');
+});
+</script>
+</body>
+</html>
